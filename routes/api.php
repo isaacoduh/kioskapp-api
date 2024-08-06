@@ -86,6 +86,8 @@ Route::group(['prefix' => 'auth'], function(){
     Route::get('dashboard',[\App\Http\Controllers\API\v1\DashboardController::class,'index']);
 });
 
+Route::post('/verify-email-otp', [\App\Http\Controllers\API\v1\AuthController::class, 'verify_email']);
+
 Route::post('orders/store', [\App\Http\Controllers\API\v1\OrderController::class,'store']);
 
 

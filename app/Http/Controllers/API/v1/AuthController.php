@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Repositories\AuthRepository;
 use App\Traits\ResponseTrait;
 use Illuminate\Http\Request;
@@ -15,9 +16,11 @@ class AuthController extends Controller
     public $authRepository;
     public function __construct(AuthRepository $authRepo)
     {
-        $this->middleware('auth:api', ['except' => ['login','register']]);
+        $this->middleware('auth:api', ['except' => ['login','register','verify_email']]);
         $this->authRepository = $authRepo;
     }
+
+   
 
     public function register(Request $request)
     {
@@ -26,10 +29,14 @@ class AuthController extends Controller
             $user = $this->authRepository->registerUser($requestData);
 
             if($user){
+                \Mail::to($user->email)->send(new \App\Mail\VerifyEmail($user, $user['email_verification_code']));
                 if($token = $this->guard()->attempt($requestData)){
                     $data = $this->respondWithToken($token);
                     return $this->responseSuccess($data, 'User Account Created', Response::HTTP_OK);
                 }
+
+                // generate otp
+                
             }
         }catch(\Exception $exception)
         {
@@ -60,6 +67,24 @@ class AuthController extends Controller
         }catch (\Exception $exception) {
             return $this->responseError(null, $exception->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+     public function verify_email(Request $request) 
+    {
+        try {
+            $data = User::where('email_verification_code', $request['otp'])->first();
+            if(!$data) {
+                return $this->responseError(null, 'Invalid Verification Operation');
+            }
+            $data['email_verified_at'] = now();
+            $data['email_verification_code'] = null;
+            $data->save();
+
+            return $this->responseSuccess(null, 'Email Verification Successful');
+        } catch (\Exception $exception) {
+            return $this->responseError(null, $exception->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+        
     }
 
     public function me()

@@ -22,10 +22,12 @@ class AuthRepository
 
     public function registerUser(array $data)
     {
+        $otp = random_int(10000, 999999);
         $data = [
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => Hash::make($data['password'])
+            'password' => Hash::make($data['password']),
+            'email_verification_code' => $otp
         ];
 
         return User::create($data);
